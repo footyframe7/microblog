@@ -8,7 +8,8 @@ const app = express();
 const port = process.env.PORT || 3000; // Render'ın PORT'unu kullan
 
 // !!! KENDİ BAĞLANTI ADRESİNİZ !!!
-const MONGO_URI = 'mongodb+srv://footyframe7:<13671367>@footyframe7.ghw9c2z.mongodb.net/microblogDB?retryWrites=true&w=majority&appName=footyframe7'; 
+const MONGO_URI = `mongodb+srv://footyframe7:${process.env.MONGO_PASSWORD}@footyframe7.ghw9c2z.mongodb.net/microblogDB?retryWrites=true&w=majority&appName=footyframe7`;
+
 // LÜTFEN <db_password> YERİNE GERÇEK ŞİFRENİZİ YAZIN!
 
 // MongoDB Bağlantısı
