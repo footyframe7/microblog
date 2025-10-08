@@ -1,4 +1,4 @@
-// server.js (BACKEND KODU - NİHAİ SÜRÜM)
+// server.js (BACKEND KODU - MONGODB BAĞLANTISI GÜNCEL)
 
 const express = require('express');
 const cors = require('cors');
@@ -7,13 +7,11 @@ const mongoose = require('mongoose');
 const app = express();
 const port = process.env.PORT || 3000; // Render'ın PORT'unu kullan
 
-// !!! KENDİ BAĞLANTI ADRESİNİZ !!!
+// !!! KENDİ BAĞLANTI ADRESİNİZ (ŞİFRE YOK) !!!
 const MONGO_URI = `mongodb+srv://footyframe7:${process.env.MONGO_PASSWORD}@footyframe7.ghw9c2z.mongodb.net/microblogDB?retryWrites=true&w=majority&appName=footyframe7`;
 
-// LÜTFEN <db_password> YERİNE GERÇEK ŞİFRENİZİ YAZIN!
-
 // MongoDB Bağlantısı
-mongoose.connect(MONGO_URI.replace('<db_password>', process.env.MONGO_PASSWORD || 'VERİ_GİRMEDİNİZ')) // Şifreyi çevre değişkeninden veya elle alır
+mongoose.connect(MONGO_URI)
   .then(() => console.log('MongoDB bağlantısı başarılı.'))
   .catch(err => console.error('MongoDB bağlantı hatası:', err));
 
@@ -30,7 +28,7 @@ const PostSchema = new mongoose.Schema({
     likes: { type: Number, default: 0 },
     comments: { type: Number, default: 0 },
     isLiked: { type: Boolean, default: false }
-}, { timestamps: true }); // Ne zaman oluşturulduğunu takip etmek için
+}, { timestamps: true });
 
 const Post = mongoose.model('Post', PostSchema);
 
