@@ -4,16 +4,50 @@ const express = require('express');
 const cors = require('cors');
 
 const app = express();
-const port = 3000; // Sunucumuz 3000 numaralı portta çalışacak
+const port = 3000; 
 
 // Middleware'ler (Yardımcı Fonksiyonlar)
-app.use(cors()); // Frontend'den gelen istekleri kabul etmek için ZORUNLU
-app.use(express.json()); // Gelen JSON verisini okuyabilmek için
+app.use(cors()); 
+app.use(express.json()); 
 
-// ÖRNEK TEST YOLU: Sunucunun çalışıp çalışmadığını kontrol etmek için
-app.get('/api/test', (req, res) => {
-    // BURAYA GEREKLİ API MANTIĞI EKLENECEKTİR
-    res.json({ message: "Backend çalışıyor! Bağlantı başarılı." });
+// **********************************************
+// ÖNEMLİ: TEST AMAÇLI STATİK VERİ DİZİSİ
+// Bu, MongoDB kurulana kadar geçici verimizdir.
+// **********************************************
+let testData = [
+    { _id: 'test_1', authorName: 'Sistem', authorHandle: '@admin', authorAvatar: 'https://i.ibb.co/L9H8bXJ/default-avatar.png', content: 'Render sunucusu BAĞLANDI! Artık internetten veri çekiyoruz.', timestamp: new Date().toLocaleString('tr-TR'), likes: 0, comments: 0, isLiked: false },
+];
+
+
+// Render'ın ana sayfa (/) isteğini karşıla (HATA ÇÖZÜMÜ)
+app.get('/', (req, res) => {
+    res.send('Microblog Backend API is Running! Use /api/posts to access data.');
+});
+
+// **********************************************
+// API YOLLARI (ROUTES)
+// **********************************************
+
+// Tüm gönderileri getir (GET)
+app.get('/api/posts', (req, res) => {
+    res.json(testData);
+});
+
+// Yeni gönderi ekle (POST)
+app.post('/api/posts', (req, res) => {
+    const newPost = {
+        _id: Date.now().toString(),
+        authorName: req.body.authorName || 'Anonim',
+        authorHandle: req.body.authorHandle || '@anonim',
+        authorAvatar: req.body.authorAvatar || 'https://i.ibb.co/L9H8bXJ/default-avatar.png',
+        content: req.body.content,
+        timestamp: new Date().toLocaleString('tr-TR'),
+        likes: 0,
+        comments: 0,
+        isLiked: false
+    };
+    testData.push(newPost);
+    res.status(201).json(newPost);
 });
 
 // Sunucuyu Başlat

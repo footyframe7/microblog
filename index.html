@@ -66,7 +66,7 @@
 
                 <!-- Dinamik Gönderi Akışı -->
                 <div id="posts-container">
-                    <p class="text-warning text-center">Yükleniyor... Eğer uzun sürerse Render sunucusu uyuyor olabilir.</p>
+                    <p class="text-warning text-center">Yükleniyor...</p>
                 </div>
             </div>
 
@@ -84,10 +84,11 @@
     <script>
         document.addEventListener('DOMContentLoaded', function() {
             
-            // Lütfen bu adresi Render'dan aldığınız canlı adresle değiştirin!
-            const RENDER_URL = 'https://microblog-fq15.onrender.com';
-            const API_BASE_URL = `${RENDER_URL}/api/posts`;
             // -----------------------------------------------------------------
+            // !!! BURAYA KENDİ RENDER ADRESİNİZİ YAPIŞTIRIN !!!
+            const RENDER_URL = 'https://microblog-fq15.onrender.com';
+            // -----------------------------------------------------------------
+            const API_BASE_URL = `${RENDER_URL}/api/posts`;
 
             // Global Element Tanımları
             const postInput = document.getElementById('post-input');
@@ -103,16 +104,11 @@
             const MAX_CHAR_LIMIT = 280; 
             const DEFAULT_AVATAR = "https://i.ibb.co/L9H8bXJ/default-avatar.png";
 
-            const USER_PROFILE = {
-                name: "Anonim", 
-                handle: "@anonim", 
-                avatarUrl: DEFAULT_AVATAR
-            };
-
-            let posts = []; // API'den çekilen veriyi geçici tutmak için
+            const USER_PROFILE = { name: "Anonim", handle: "@anonim", avatarUrl: DEFAULT_AVATAR };
+            let posts = [];
 
             /* ===================================================
-               BÖLÜM 1: VERİ KALICILIĞI (Local Storage) - Profil için kullanılır
+               BÖLÜM 1: PROFİL YÖNETİMİ
             =================================================== */
 
             function updateAvatarDisplay() {
@@ -134,7 +130,7 @@
             }
 
             /* ===================================================
-               BÖLÜM 2: API İŞLEMLERİ (YENİ SİSTEM)
+               BÖLÜM 2: API İŞLEMLERİ
             =================================================== */
 
             async function loadPosts() {
@@ -146,12 +142,10 @@
                     posts.reverse(); // En yeniyi en üste koy
                 } catch (error) {
                     console.error("API Bağlantı Hatası:", error);
-                    postsContainer.innerHTML = `<p class="text-danger text-center">HATA: Sunucuya ulaşılamıyor. Sunucunuzu kontrol edin. (${error.message})</p>`;
-                    // Local Storage'dan da çekmiyoruz, hata mesajı gösteriyoruz.
+                    postsContainer.innerHTML = `<p class="text-danger text-center">HATA: Sunucuya ulaşılamıyor. Sunucuyu kontrol edin. (Hata: ${error.message})</p>`;
                 }
             }
 
-            // Yeni Gönderi API'ye kaydet
             async function saveNewPost(newPost) {
                 await fetch(API_BASE_URL, {
                     method: 'POST',
@@ -160,21 +154,17 @@
                 });
             }
 
-            // Beğenme API isteği
             async function toggleLike(postId) {
                 await fetch(`${API_BASE_URL}/${postId}/like`, { method: 'POST' });
             }
 
-            // Gönderi Silme API isteği (Global Fonksiyon)
             window.deletePost = async function(postId) {
                 if (confirm("Bu gönderiyi silmek istediğinizden emin misiniz?")) {
                     await fetch(`${API_BASE_URL}/${postId}`, { method: 'DELETE' });
-                    
                     await loadPosts();
                     renderPosts();
                 }
             }
-
 
             /* ===================================================
                BÖLÜM 3: EKRAN GÖSTERİMİ
@@ -210,10 +200,11 @@
             function renderPosts() {
                 saveUserProfile(); 
                 if (postsContainer) {
-                    // Sadece API'den veri geldiyse çiz
-                    if(posts.length > 0 && posts[0].content !== "HATA: Render sunucusu uyuyor olabilir."){
+                    if(Array.isArray(posts) && posts.length > 0){
                         const postsHtml = posts.map(createPostHtml).join('');
                         postsContainer.innerHTML = postsHtml;
+                    } else if (postsContainer.innerHTML.includes("Yükleniyor") || posts.length === 0){
+                        postsContainer.innerHTML = '<p class="text-warning text-center">Henüz hiç gönderi yok. İlk gönderiyi siz yapın!</p>';
                     }
                 }
             }
@@ -222,15 +213,26 @@
                 const likeBtn = event.target.closest('.post-like-btn');
                 
                 if (likeBtn) {
-                    const postId = likeBtn.dataset.id; // API'den gelen id string'dir
+                    const postId = likeBtn.dataset.id; 
                     await toggleLike(postId);
-                    await loadPosts(); // Beğenme sonrası veriyi tekrar çek
+                    await loadPosts(); 
                     renderPosts(); 
                 } 
             }
             if (postsContainer) { postsContainer.addEventListener('click', handlePostInteraction); }
 
             // ... (Karakter Sayacı, Gönderi Yayımlama aynı kalır ama async olur)
+
+            function updatePostInput() {
+                if (!postInput || !charCount || !postButton) return;
+                const currentLength = postInput.value.length;
+                charCount.textContent = `${currentLength}/${MAX_CHAR_LIMIT}`;
+                const isValid = currentLength > 0 && currentLength <= MAX_CHAR_LIMIT;
+                postButton.disabled = !isValid;
+                charCount.classList.toggle('text-danger', currentLength > MAX_CHAR_LIMIT);
+                charCount.classList.toggle('text-secondary', currentLength <= MAX_CHAR_LIMIT);
+            }
+            if (postInput) postInput.addEventListener('input', updatePostInput);
 
             async function handlePostSubmit(event) {
                 if (!postForm) return;
@@ -247,4 +249,55 @@
                 };
 
                 await saveNewPost(newPost);
-                await loadPosts(); // Yeni postu çek ve göster
+                await loadPosts(); 
+                renderPosts();
+
+                postInput.value = '';
+                updatePostInput();
+            }
+            if (postForm) postForm.addEventListener('submit', handlePostSubmit);
+
+
+            /* ===================================================
+               BÖLÜM 4: PROFİL YÖNETİMİ
+            =================================================== */
+
+            window.updateUserName = function() {
+                const newName = prompt("Yeni adınızı girin:");
+                if (newName && newName.trim().length > 0) {
+                    USER_PROFILE.name = newName.trim();
+                    saveUserProfile(); 
+                    renderPosts(); 
+                }
+            }
+
+            window.updateUserHandle = function() {
+                const newHandle = prompt("Yeni kullanıcı adınızı (@ olmadan) girin:");
+                if (newHandle && newHandle.trim().length > 0) {
+                    const finalHandle = "@" + newHandle.trim().toLowerCase().replace(/\s/g, ''); 
+                    USER_PROFILE.handle = finalHandle;
+                    saveUserProfile(); 
+                    renderPosts(); 
+                }
+            }
+
+            window.updateAvatar = function() {
+                const newUrl = prompt("Yeni profil fotoğrafınızın URL'sini yapıştırın:");
+                if (newUrl && newUrl.trim().length > 0) {
+                    USER_PROFILE.avatarUrl = newUrl.trim();
+                    saveUserProfile(); 
+                    renderPosts(); 
+                }
+            }
+
+            /* ===================================================
+               BÖLÜM 5: UYGULAMA BAŞLANGICI
+            =================================================== */
+
+            loadUserProfile(); 
+            loadPosts().then(renderPosts);
+            updatePostInput(); 
+        });
+    </script>
+</body>
+</html>
