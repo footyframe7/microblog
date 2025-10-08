@@ -1,22 +1,42 @@
-// server.js (BACKEND KODU)
+// server.js (BACKEND KODU - NİHAİ SÜRÜM)
 
 const express = require('express');
 const cors = require('cors');
+const mongoose = require('mongoose');
 
 const app = express();
-const port = 3000; 
+const port = process.env.PORT || 3000; // Render'ın PORT'unu kullan
 
-// Middleware'ler (Yardımcı Fonksiyonlar)
+// !!! KENDİ BAĞLANTI ADRESİNİZ !!!
+const MONGO_URI = 'mongodb+srv://footyframe7:<13671367>@footyframe7.ghw9c2z.mongodb.net/microblogDB?retryWrites=true&w=majority&appName=footyframe7'; 
+// LÜTFEN <db_password> YERİNE GERÇEK ŞİFRENİZİ YAZIN!
+
+// MongoDB Bağlantısı
+mongoose.connect(MONGO_URI.replace('<db_password>', process.env.MONGO_PASSWORD || 'VERİ_GİRMEDİNİZ')) // Şifreyi çevre değişkeninden veya elle alır
+  .then(() => console.log('MongoDB bağlantısı başarılı.'))
+  .catch(err => console.error('MongoDB bağlantı hatası:', err));
+
+
+// **********************************************
+// MONGODB POST MODELİ
+// **********************************************
+const PostSchema = new mongoose.Schema({
+    authorName: String,
+    authorHandle: String,
+    authorAvatar: String,
+    content: { type: String, required: true },
+    timestamp: { type: String, default: new Date().toLocaleString('tr-TR') },
+    likes: { type: Number, default: 0 },
+    comments: { type: Number, default: 0 },
+    isLiked: { type: Boolean, default: false }
+}, { timestamps: true }); // Ne zaman oluşturulduğunu takip etmek için
+
+const Post = mongoose.model('Post', PostSchema);
+
+
+// Middleware'ler
 app.use(cors()); 
 app.use(express.json()); 
-
-// **********************************************
-// ÖNEMLİ: TEST AMAÇLI STATİK VERİ DİZİSİ
-// Bu, MongoDB kurulana kadar geçici verimizdir.
-// **********************************************
-let testData = [
-    { _id: 'test_1', authorName: 'Sistem', authorHandle: '@admin', authorAvatar: 'https://i.ibb.co/L9H8bXJ/default-avatar.png', content: 'Render sunucusu BAĞLANDI! Artık internetten veri çekiyoruz.', timestamp: new Date().toLocaleString('tr-TR'), likes: 0, comments: 0, isLiked: false },
-];
 
 
 // Render'ın ana sayfa (/) isteğini karşıla (HATA ÇÖZÜMÜ)
@@ -24,30 +44,56 @@ app.get('/', (req, res) => {
     res.send('Microblog Backend API is Running! Use /api/posts to access data.');
 });
 
+
 // **********************************************
 // API YOLLARI (ROUTES)
 // **********************************************
 
-// Tüm gönderileri getir (GET)
-app.get('/api/posts', (req, res) => {
-    res.json(testData);
+// 1. Tüm gönderileri getir (GET)
+app.get('/api/posts', async (req, res) => {
+    try {
+        const posts = await Post.find().sort({ createdAt: -1 }); // En yeniyi en üste getir
+        res.json(posts);
+    } catch (err) {
+        res.status(500).json({ message: "Veri tabanından veri çekilemedi." });
+    }
 });
 
-// Yeni gönderi ekle (POST)
-app.post('/api/posts', (req, res) => {
-    const newPost = {
-        _id: Date.now().toString(),
-        authorName: req.body.authorName || 'Anonim',
-        authorHandle: req.body.authorHandle || '@anonim',
-        authorAvatar: req.body.authorAvatar || 'https://i.ibb.co/L9H8bXJ/default-avatar.png',
-        content: req.body.content,
-        timestamp: new Date().toLocaleString('tr-TR'),
-        likes: 0,
-        comments: 0,
-        isLiked: false
-    };
-    testData.push(newPost);
-    res.status(201).json(newPost);
+// 2. Yeni gönderi ekle (POST)
+app.post('/api/posts', async (req, res) => {
+    try {
+        const newPost = new Post(req.body);
+        await newPost.save();
+        res.status(201).json(newPost);
+    } catch (err) {
+        res.status(400).json({ message: "Gönderi kaydedilemedi." });
+    }
+});
+
+// 3. Gönderiyi sil (DELETE)
+app.delete('/api/posts/:id', async (req, res) => {
+    try {
+        await Post.findByIdAndDelete(req.params.id);
+        res.status(204).send();
+    } catch (err) {
+        res.status(500).json({ message: "Gönderi silinemedi." });
+    }
+});
+
+// 4. Beğeniyi değiştir (POST / LIKE)
+app.post('/api/posts/:id/like', async (req, res) => {
+    try {
+        const post = await Post.findById(req.params.id);
+        if (!post) return res.status(404).json({ message: 'Post bulunamadı.' });
+
+        post.isLiked = !post.isLiked;
+        post.likes = post.isLiked ? post.likes + 1 : post.likes - 1;
+
+        await post.save();
+        res.status(200).json(post);
+    } catch (err) {
+        res.status(500).json({ message: "Beğeni güncellenemedi." });
+    }
 });
 
 // Sunucuyu Başlat
