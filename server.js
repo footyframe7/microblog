@@ -1,3 +1,7 @@
+// ARTIK ŞİFREYİ KODUN İÇİNDE TUTMUYORUZ.
+// Render'a başka bir değişkenle vereceğiz.
+const MONGO_URI = process.env.MONGO_URI;
+
 // server.js (BACKEND KODU - MONGODB BAĞLANTISI GÜNCEL)
 
 const express = require('express');
