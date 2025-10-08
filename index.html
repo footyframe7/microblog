@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Microblog-Clone | NİHAİ SÜRÜM</title>
+
+    <!-- 1. Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous">
+
+    <!-- 2. Font Awesome İkonları -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" integrity="sha512-SnH5WK+bZxgPHs44uWIX+LLMD/CDQOQ0BTAhqh8P8K0l9G82t/FfM/t9910dY01lK8zQh0d0tT4u9n4xL7tQ==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+
+    <!-- 3. CSS Kodları (Temel Stil) -->
+    <style>
+        .text-light, .text-secondary, .post-item p, .post-item h6, .post-item span, .post-item a {
+            color: #FFFFFF !important;
+            text-decoration: none !important;
+        }
+        .fas, .far { color: #FFFFFF !important; }
+        .fa-heart.fas.text-danger { color: #dc3545 !important; }
+        .col-lg-6 { max-width: 600px; } /* Orta akışı tekrar sınırlandıralım */
+        #post-input::placeholder { color: #657786; opacity: 1; }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; }
+    </style>
+</head>
+<body class="bg-dark text-light"> 
+
+    <main class="container-fluid pt-3">
+        <div class="row justify-content-center">
+
+            <!-- SOL SÜTUN (Profil Yönetimi) -->
+            <div class="col-lg-3 col-md-4 d-none d-md-block border-end border-secondary">
+                <div class="p-3">
+                    <img id="profile-avatar" src="https://i.ibb.co/L9H8bXJ/default-avatar.png" alt="Profil Fotoğrafı" class="rounded-circle mb-3" width="64" height="64" style="object-fit: cover;">
+                    <button class="btn btn-outline-secondary btn-sm mb-4" onclick="window.updateAvatar()">Fotoğrafı Değiştir</button>
+                    
+                    <h5 class="text-secondary mb-1">Profil Adı</h5>
+                    <p class="fw-bold fs-5 mb-3" id="user-display-name">Anonim</p>
+                    
+                    <h5 class="text-secondary mb-1">Kullanıcı Adı</h5>
+                    <p class="fw-bold fs-5 mb-3" id="user-handle-display">@anonim</p>
+                    
+                    <button class="btn btn-primary btn-sm w-100 mb-2" onclick="window.updateUserName()">Adı Değiştir</button>
+                    <button class="btn btn-outline-secondary btn-sm w-100 mb-2" onclick="window.updateUserHandle()">Kullanıcı Adı Değiştir</button>
+                </div>
+            </div>
+
+            <!-- ORTA SÜTUN (GÖNDERİ AKIŞI) -->
+            <div class="col-lg-6 col-md-8 border-end border-secondary min-vh-100">
+                
+                <h1 class="fs-4 fw-bold border-bottom border-secondary pb-3 sticky-top bg-dark pt-2">Ana Sayfa</h1>
+
+                <!-- YENİ GÖNDERİ ALANI -->
+                <div class="border-bottom border-secondary p-3 mb-3">
+                    <div class="d-flex align-items-start">
+                        <img id="post-avatar-preview" src="https://i.ibb.co/L9H8bXJ/default-avatar.png" alt="Avatar" class="rounded-circle me-3" width="40" height="40" style="object-fit: cover;">
+                        <form id="post-form" class="flex-grow-1">
+                            <textarea id="post-input" class="form-control bg-dark text-light border-0" rows="3" placeholder="Ne düşünüyorsun?"></textarea>
+                            
+                            <div class="d-flex justify-content-end align-items-center mt-2 pt-2 border-top border-secondary">
+                                <span id="char-count" class="text-secondary me-3">0/280</span>
+                                <button type="submit" id="post-button" class="btn btn-primary rounded-pill px-4" disabled>Gönder</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- Dinamik Gönderi Akışı -->
+                <div id="posts-container">
+                    <!-- JS İLE DOLDURULACAK -->
+                </div>
+            </div>
+
+            <!-- SAĞ SÜTUN KALDIRILDI -->
+        </div>
+    </main>
+
+    <!-- 4. Bootstrap JS Bağlantısı -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eOzrphSlsWzJ+J" crossorigin="anonymous"></script>
+
+    <!-- 5. JavaScript Kodları (NİHAİ SÜRÜM) -->
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            
+            const postInput = document.getElementById('post-input');
+            const postButton = document.getElementById('post-button');
+            const charCount = document.getElementById('char-count');
+            const postForm = document.getElementById('post-form');
+            const postsContainer = document.getElementById('posts-container');
+            const userDisplayName = document.getElementById('user-display-name'); 
+            const userHandleDisplay = document.getElementById('user-handle-display'); 
+            const profileAvatarImg = document.getElementById('profile-avatar'); 
+            const postAvatarPreview = document.getElementById('post-avatar-preview');
+            const MAX_CHAR_LIMIT = 280; 
+            const DEFAULT_AVATAR = "https://i.ibb.co/L9H8bXJ/default-avatar.png";
+
+            const USER_PROFILE = { name: "Anonim", handle: "@anonim", avatarUrl: DEFAULT_AVATAR };
+            
+            let posts = [];
+
+            // Profil Avatarı Güncelleme
+            function updateAvatarDisplay() {
+                if (profileAvatarImg) profileAvatarImg.src = USER_PROFILE.avatarUrl;
+                if (postAvatarPreview) postAvatarPreview.src = USER_PROFILE.avatarUrl;
+            }
+
+            // Local Storage Yükleme ve Kaydetme (Basit)
+            function loadPosts() {
+                const storedPosts = localStorage.getItem('microblogPosts');
+                if (storedPosts) {
+                    posts = JSON.parse(storedPosts);
+                } else {
+                    posts = [
+                        { id: 1, content: "Projenizin NİHAİ SÜRÜMÜ çalışıyor! Profilinizi, adınızı ve avatarınızı değiştirin.", timestamp: new Date().toLocaleString('tr-TR'), likes: 5, comments: 0, isLiked: false },
+                        { id: 2, content: "Bu, öğrenme yolculuğunuzda büyük bir adımdır. Tebrikler!", timestamp: new Date().toLocaleString('tr-TR'), likes: 12, comments: 0, isLiked: true }
+                    ];
+                }
+            }
+            function savePosts() { localStorage.setItem('microblogPosts', JSON.stringify(posts)); }
+            
+            // Profil Yükleme ve Kaydetme
+            function loadUserProfile() {
+                const storedProfile = localStorage.getItem('microblogUserProfile');
+                if (storedProfile) { Object.assign(USER_PROFILE, JSON.parse(storedProfile)); }
+                updateAvatarDisplay();
+            }
+            function saveUserProfile() {
+                localStorage.setItem('microblogUserProfile', JSON.stringify(USER_PROFILE));
+                if (userDisplayName) userDisplayName.textContent = USER_PROFILE.name; 
+                if (userHandleDisplay) userHandleDisplay.textContent = USER_PROFILE.handle;
+                updateAvatarDisplay();
+            }
+
+
+            // Gönderi HTML Oluşturma
+            function createPostHtml(post) {
+                const likeIcon = post.isLiked ? 'fas fa-heart text-danger' : 'far fa-heart text-secondary';
+                
+                return `
+                    <div class="card bg-dark border-top border-secondary rounded-0 p-3 post-item" data-post-id="${post.id}">
+                        <div class="d-flex align-items-start">
+                            <img src="${USER_PROFILE.avatarUrl}" alt="Avatar" class="rounded-circle me-3" width="40" height="40" style="object-fit: cover;">
+                            <div class="flex-grow-1">
+                                <h6 class="mb-1 fw-bold">${USER_PROFILE.name} <span class="text-secondary fw-normal me-1">${USER_PROFILE.handle}</span> · ${post.timestamp}</h6>
+                                <p class="mb-3">${post.content}</p>
+
+                                <div class="d-flex justify-content-between align-items-center text-secondary mt-3 pt-2 border-top border-secondary">
+                                    <div class="d-flex">
+                                        <div class="me-4"><i class="far fa-comment me-1"></i><span>${post.comments}</span></div>
+                                        <div class="post-like-btn" data-id="${post.id}" style="cursor: pointer;"><i class="${likeIcon} me-1"></i><span>${post.likes}</span></div>
+                                    </div>
+                                    <div class="text-end">
+                                        <a href="#" class="text-danger fw-bold" onclick="window.deletePost(${post.id}); return false;">SİL</a>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
+
+            // Gönderi Akışını Çizme
+            function renderPosts() {
+                saveUserProfile();
+                const postsHtml = posts.map(createPostHtml).join('');
+                postsContainer.innerHTML = postsHtml;
+            }
+
+            // Karakter Sayacı ve Buton Kontrolü
+            function updatePostInput() {
+                const currentLength = postInput.value.length;
+                charCount.textContent = `${currentLength}/${MAX_CHAR_LIMIT}`;
+                const isValid = currentLength > 0 && currentLength <= MAX_CHAR_LIMIT;
+                postButton.disabled = !isValid;
+                charCount.classList.toggle('text-danger', currentLength > MAX_CHAR_LIMIT);
+                charCount.classList.toggle('text-secondary', currentLength <= MAX_CHAR_LIMIT);
+            }
+            if(postInput) postInput.addEventListener('input', updatePostInput);
+
+            // Yeni Gönderi Yayımlama
+            function handlePostSubmit(event) {
+                event.preventDefault(); 
+                const content = postInput.value.trim();
+                if (content.length === 0 || content.length > MAX_CHAR_LIMIT) return;
+
+                const newPost = {
+                    id: Date.now(), 
+                    content: content,
+                    timestamp: new Date().toLocaleString('tr-TR'),
+                    likes: 0, comments: 0, isLiked: false
+                };
+
+                posts.unshift(newPost);
+                savePosts(); 
+                renderPosts();
+
+                postInput.value = '';
+                updatePostInput();
+            }
+            if(postForm) postForm.addEventListener('submit', handlePostSubmit);
+
+            // Beğenme İşlevi
+            function handlePostInteraction(event) {
+                const likeBtn = event.target.closest('.post-like-btn');
+                
+                if (likeBtn) {
+                    const postId = parseInt(likeBtn.dataset.id); 
+                    const postToUpdate = posts.find(post => post.id === postId);
+
+                    if (postToUpdate) {
+                        postToUpdate.isLiked = !postToUpdate.isLiked;
+                        postToUpdate.isLiked ? postToUpdate.likes++ : postToUpdate.likes--;
+                        savePosts(); 
+                        renderPosts(); 
+                    }
+                } 
+            }
+            if(postsContainer) postsContainer.addEventListener('click', handlePostInteraction);
+
+            // Profil Yönetimi Fonksiyonları (Global)
+            window.updateUserName = function() {
+                const newName = prompt("Yeni adınızı girin:");
+                if (newName && newName.trim().length > 0) {
+                    USER_PROFILE.name = newName.trim();
+                    saveUserProfile(); 
+                    renderPosts(); 
+                }
+            }
+            window.updateUserHandle = function() {
+                const newHandle = prompt("Yeni kullanıcı adınızı (@ olmadan) girin:");
+                if (newHandle && newHandle.trim().length > 0) {
+                    const finalHandle = "@" + newHandle.trim().toLowerCase().replace(/\s/g, ''); 
+                    USER_PROFILE.handle = finalHandle;
+                    saveUserProfile(); 
+                    renderPosts(); 
+                }
+            }
+            window.updateAvatar = function() {
+                const newUrl = prompt("Yeni profil fotoğrafınızın URL'sini yapıştırın:");
+                if (newUrl && newUrl.trim().length > 0) {
+                    USER_PROFILE.avatarUrl = newUrl.trim();
+                    saveUserProfile(); 
+                    renderPosts(); 
+                }
+            }
+            
+            // Silme İşlevi (Global)
+            window.deletePost = function(postId) {
+                if (confirm("Bu gönderiyi silmek istediğinizden emin misiniz?")) {
+                    posts = posts.filter(post => post.id !== postId);
+                    savePosts(); 
+                    renderPosts();
+                }
+            }
+
+            // Başlatma
+            loadUserProfile();
+            loadPosts();       
+            updatePostInput(); 
+            renderPosts();
+        });
+    </script>
+</body>
+</html>
